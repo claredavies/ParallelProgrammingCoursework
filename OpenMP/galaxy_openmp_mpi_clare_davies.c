@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
         ++histogram_DR[index];
 
       }
-      printf("at loop: %d\n", i);
+      printf("at loop set 1 : %d\n", i);
     }
     printf("The count is: %d\n", count);
 
@@ -112,26 +112,28 @@ int main(int argc, char* argv[])
     // ///////////////////////////////////////////
     // // for RR
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 1000; ++i) {
-      for(j = i+1; j < 1000; ++j) {
+    for(i = 0; i < 100000; ++i) {
+      for(j = i+1; j < 100000; ++j) {
         index = get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j]);
         // #pragma omp atomic
         histogram_RR[index] += 2;
-
       }
+      printf("at loop set 2 : %d\n", i);
+
     }
     histogram_RR[0] += 100000;
 
     // // for DD
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 1000; ++i) {
-      for(j = i+1; j < 1000; ++j) {
+    for(i = 0; i < 100000; ++i) {
+      for(j = i+1; j < 100000; ++j) {
         index = get_index(rand_rasc[i], rand_rasc[i], rand_rasc[j], rand_rasc[j]);
 
         // #pragma omp atomic
         histogram_DD[index] += 2;
 
       }
+      printf("at loop set 3 : %d\n", i);
     }
     histogram_DD[0] += 100000;
 
@@ -139,9 +141,9 @@ int main(int argc, char* argv[])
 //     // check point: the sum of all historgram entries should be 10 000 000 000
     long int histsum = 0L;
     int      correct_value=1;
-    // for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
-    // printf("   Histogram DD : sum = %ld\n",histsum);
-    // if ( histsum != 10000000000L ) correct_value = 0;
+    for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
+    printf("   Histogram DD : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
 
     histsum = 0L;
     for ( int i = 0; i < 360; ++i ) 
@@ -149,13 +151,13 @@ int main(int argc, char* argv[])
     printf("   Histogram DR : sum = %ld\n",histsum);
     if ( histsum != 10000000000L ) correct_value = 0;
 
-    // histsum = 0L;
-    // for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
-    // printf("   Histogram RR : sum = %ld\n",histsum);
-    // if ( histsum != 10000000000L ) correct_value = 0;
+    histsum = 0L;
+    for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
+    printf("   Histogram RR : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
 
-    // if ( correct_value != 1 ) 
-    //    {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
+    if ( correct_value != 1 ) 
+       {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
 
 //     printf("   Omega values for the histograms:\n");
 //     float omega[360];
@@ -206,9 +208,11 @@ double get_input_angle(long rasc_1, long decl_1, long rasc_2, long decl_2)
 
 int get_index(long rasc_1, long decl_1, long rasc_2, long decl_2)
     {
-        inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+        double inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
 
-        angle = acos(inputAngle)*180.0/pif;
+        double angle = acos(inputAngle)*180.0/pif;
+
+        int index;
         
         if(angle < 0.25)
           index = 1;
