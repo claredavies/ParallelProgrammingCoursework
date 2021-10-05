@@ -24,7 +24,7 @@
 // and run with e.g. 100 cores
 //    srun -n 100 ./galaxy_mpi data_100k_arcmin.dat rand_100k_arcmin.dat omega.out    
 
-// #include <omp.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -39,7 +39,8 @@ int main(int argc, char* argv[])
 
     // declaring functions
     int parseargs_readinput(int argc, char *argv[]);
-    long get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl);
+    double get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl);
+    int get_index(long rasc_1, long decl_1, long rasc_2, long decl_2);
 
     struct timeval _ttime;
     struct timezone _tzone;
@@ -74,114 +75,87 @@ int main(int argc, char* argv[])
 //  helpful hint: there are no angles above 90 degrees!
 //  histogram[0] covers  0.00 <=  angle  <   0.25
 //  histogram[1] covers  0.25 <=  angle  <   0.50
-//  histogram[2] covers  0.50 <=  angle  <   0.75
-//  histogram[3] covers  0.75 <=  angle  <   1.00
-//  histogram[4] covers  1.00 <=  angle  <   1.25
 //  and so on until     89.75 <=  angle  <= 90.0
 
-    // here goes your code to calculate angles and to fill in 
-    // histogram_DD, histogram_DR and histogram_RR
-    // use as input data the arrays real_rasc[], real_decl[], rand_rasc[], rand_decl[]      
-// a - ascension
-// d - declination
-//  arccos(sin(d1)*sin(d2)+cos(d1)*cos(d2)*cos(a1-a2))
-   
     int i,j;
     int index;
-    long angle,inputAngle;
+    double angle,inputAngle;
+    int count = 0;
 
 
      // for DR
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 1000; ++i) 
+    for(i = 0; i < 100000; ++i) 
     {
-      for(j =0; j < 1000; ++j) 
+      for(j =0; j < 100000; ++j) 
       {
-        
+        count++;
         if(i == j) {
           // #pragma omp atomic
           ++histogram_DR[0];
           continue;
         }
+        index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_rasc[j]);
 
-
-        inputAngle = get_input_angle(real_rasc[j], real_decl[j], rand_rasc[j], rand_decl[j]);
-
-        angle = acos(inputAngle)*180.0/pif;
-        index = (int) (4.0*angle);
-      
+        // printf("index is:::   %f", angle);
+        // printf("angle is:::   %d", index);
+        
         // #pragma omp atomic
         ++histogram_DR[index];
 
       }
-
+      printf("at loop: %d\n", i);
     }
+    printf("The count is: %d\n", count);
 
- 
 
     // ///////////////////////////////////////////
-    // // for DD & RR
-    // // #pragma omp parallel for private(j)
-    // for(i = 0; i < 1000; ++i) {
-    //   for(j = i+1; j < 1000; ++j) {
+    // // for RR
+    // #pragma omp parallel for private(j)
+    for(i = 0; i < 1000; ++i) {
+      for(j = i+1; j < 1000; ++j) {
+        index = get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j]);
+        // #pragma omp atomic
+        histogram_RR[index] += 2;
 
-    //     angle = acos()*180.0/pif;
-    //     index = (int) (4.0*angle);
-    //     // #pragma omp atomic
-    //     histogram_RR[index] += 2;
+      }
+    }
+    histogram_RR[0] += 100000;
 
-    //   }
+    // // for DD
+    // #pragma omp parallel for private(j)
+    for(i = 0; i < 1000; ++i) {
+      for(j = i+1; j < 1000; ++j) {
+        index = get_index(rand_rasc[i], rand_rasc[i], rand_rasc[j], rand_rasc[j]);
 
-    // }
+        // #pragma omp atomic
+        histogram_DD[index] += 2;
 
-    // histogram_RR[0] += 100000;
-
-    // // #pragma omp parallel for private(j)
-    // for(i = 0; i < 1000; ++i) {
-    //   for(j = i+1; j < 1000; ++j) {
-
-    //     angle = acos()*180.0/pif;
-    //     index = (int) (4.0*angle);
-    //     // #pragma omp atomic
-    //     histogram_DD[index] += 2;
-
-    //   }
-
-    // }
-
-    // histogram_DD[0] += 100000;
-
-    // ////////
-
-
-
-
-
-
-
-
-
+      }
+    }
+    histogram_DD[0] += 100000;
 
 
 //     // check point: the sum of all historgram entries should be 10 000 000 000
-//     long int histsum = 0L;
-//     int      correct_value=1;
-//     for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
-//     printf("   Histogram DD : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
+    long int histsum = 0L;
+    int      correct_value=1;
+    // for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
+    // printf("   Histogram DD : sum = %ld\n",histsum);
+    // if ( histsum != 10000000000L ) correct_value = 0;
 
-//     histsum = 0L;
-//     for ( int i = 0; i < 360; ++i ) histsum += histogram_DR[i];
-//     printf("   Histogram DR : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
+    histsum = 0L;
+    for ( int i = 0; i < 360; ++i ) 
+      histsum += histogram_DR[i];
+    printf("   Histogram DR : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
 
-//     histsum = 0L;
-//     for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
-//     printf("   Histogram RR : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
+    // histsum = 0L;
+    // for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
+    // printf("   Histogram RR : sum = %ld\n",histsum);
+    // if ( histsum != 10000000000L ) correct_value = 0;
 
-//     if ( correct_value != 1 ) 
-//        {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
+    // if ( correct_value != 1 ) 
+    //    {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
 
 //     printf("   Omega values for the histograms:\n");
 //     float omega[360];
@@ -216,10 +190,9 @@ int main(int argc, char* argv[])
 //     return(0);
 }
 
-
-long get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl)
+double get_input_angle(long rasc_1, long decl_1, long rasc_2, long decl_2)
     {
-        long inputAngle = sin(real_decl)*sin(rand_decl)+cos(real_decl)*cos(rand_decl)*cos(real_rasc-rand_rasc);
+        double inputAngle = sin(decl_1)*sin( decl_2)+cos(decl_1)*cos(decl_2)*cos(rasc_1-rasc_2);
         
         if(inputAngle > 1)
           inputAngle = 1.0;
@@ -227,6 +200,23 @@ long get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_d
           inputAngle = -1.0;
 
         return inputAngle;
+    }
+
+  
+
+int get_index(long rasc_1, long decl_1, long rasc_2, long decl_2)
+    {
+        inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+
+        angle = acos(inputAngle)*180.0/pif;
+        
+        if(angle < 0.25)
+          index = 1;
+
+        else
+          index = (int) (4.0*angle);
+
+        return index;
     }
 
 
