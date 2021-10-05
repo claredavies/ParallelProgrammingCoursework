@@ -9,7 +9,6 @@
 // ./GalaxyOpenMP RealGalaxies_100k_arcmin.txt SyntheticGalaxies_100k_arcmin.txt output.txt 
 
 //////////////////////////////////////////////////////////////////////////////
-/
 // Compilation on dione:
 //    module load gcc               // do this once when you log in
 //
@@ -37,7 +36,11 @@ long int MemoryAllocatedCPU = 0L;
 
 int main(int argc, char* argv[]) 
     {
+
+    // declaring functions
     int parseargs_readinput(int argc, char *argv[]);
+    long get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl);
+
     struct timeval _ttime;
     struct timezone _tzone;
 
@@ -79,33 +82,40 @@ int main(int argc, char* argv[])
     // here goes your code to calculate angles and to fill in 
     // histogram_DD, histogram_DR and histogram_RR
     // use as input data the arrays real_rasc[], real_decl[], rand_rasc[], rand_decl[]      
-
+// a - ascension
+// d - declination
+//  arccos(sin(d1)*sin(d2)+cos(d1)*cos(d2)*cos(a1-a2))
    
-    // int i,j;
+    int i,j;
+    int index;
+    long angle,inputAngle;
 
 
-    //  // for DR
-    // // #pragma omp parallel for private(j)
-    // for(i = 0; i < 1000; ++i) 
-    // {
-    //   for(j =0; j < 1000; ++j) 
-    //   {
+     // for DR
+    // #pragma omp parallel for private(j)
+    for(i = 0; i < 1000; ++i) 
+    {
+      for(j =0; j < 1000; ++j) 
+      {
         
-    //     if(i == j) {
-    //       // #pragma omp atomic
-    //       ++histogram_DR[0];
-    //       continue;
-    //     }
+        if(i == j) {
+          // #pragma omp atomic
+          ++histogram_DR[0];
+          continue;
+        }
 
-    //     angle = acos()*180.0/pif;
-    //     index = (int) (4.0*angle);
+
+        inputAngle = get_input_angle(real_rasc[j], real_decl[j], rand_rasc[j], rand_decl[j]);
+
+        angle = acos(inputAngle)*180.0/pif;
+        index = (int) (4.0*angle);
       
-    //     // #pragma omp atomic
-    //     ++histogram_DR[index];
+        // #pragma omp atomic
+        ++histogram_DR[index];
 
-    //   }
+      }
 
-    // }
+    }
 
  
 
@@ -206,6 +216,18 @@ int main(int argc, char* argv[])
 //     return(0);
 }
 
+
+long get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl)
+    {
+        long inputAngle = sin(real_decl)*sin(rand_decl)+cos(real_decl)*cos(rand_decl)*cos(real_rasc-rand_rasc);
+        
+        if(inputAngle > 1)
+          inputAngle = 1.0;
+        else if(inputAngle < -1)
+          inputAngle = -1.0;
+
+        return inputAngle;
+    }
 
 
 int parseargs_readinput(int argc, char *argv[])
