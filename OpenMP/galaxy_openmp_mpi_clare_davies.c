@@ -1,17 +1,15 @@
 // How to Compile:
-// cd to folder /Users/claredavies/Dropbox/EDISS 1st Year/1st semester Finland/Parallel/OpenMP
+// cd to folder /Users/claredavies/Dropbox/EDISS1stYear/1stSemesterFinland/Parallel/OpenMP
 // gcc -o GalaxyOpenMP galaxy_openmp_mpi_clare_davies.c
 // ./GalaxyOpenMP
 
+// How to run
+// Stay in same folder and make sure RealGalaxies_100k_arcmin.txt, SyntheticGalaxies_100k_arcmin.txt
+// and output.txt (blank output file) then run:
+// ./GalaxyOpenMP RealGalaxies_100k_arcmin.txt SyntheticGalaxies_100k_arcmin.txt output.txt 
 
-// This is a template for sequential, OpenMP and MPI programs.
-// By filling in the code to calculate angles and incrementing the histograms
-// this will work as a sequential program.
-//
-// In exercise 1, redesign the template for OpenMP: galaxy_openmp.c
-//
-// In exercise 2, redesign the template for MPI: galaxy_mpi.c
-
+//////////////////////////////////////////////////////////////////////////////
+/
 // Compilation on dione:
 //    module load gcc               // do this once when you log in
 //
@@ -27,12 +25,7 @@
 // and run with e.g. 100 cores
 //    srun -n 100 ./galaxy_mpi data_100k_arcmin.dat rand_100k_arcmin.dat omega.out    
 
-
-
-
-// Uncomment as necessary
-//#include <mpi.h>
-//#include <omp.h>
+// #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -88,6 +81,67 @@ int main(int argc, char* argv[])
     // use as input data the arrays real_rasc[], real_decl[], rand_rasc[], rand_decl[]      
 
    
+    // int i,j;
+
+
+    //  // for DR
+    // // #pragma omp parallel for private(j)
+    // for(i = 0; i < 1000; ++i) 
+    // {
+    //   for(j =0; j < 1000; ++j) 
+    //   {
+        
+    //     if(i == j) {
+    //       // #pragma omp atomic
+    //       ++histogram_DR[0];
+    //       continue;
+    //     }
+
+    //     angle = acos()*180.0/pif;
+    //     index = (int) (4.0*angle);
+      
+    //     // #pragma omp atomic
+    //     ++histogram_DR[index];
+
+    //   }
+
+    // }
+
+ 
+
+    // ///////////////////////////////////////////
+    // // for DD & RR
+    // // #pragma omp parallel for private(j)
+    // for(i = 0; i < 1000; ++i) {
+    //   for(j = i+1; j < 1000; ++j) {
+
+    //     angle = acos()*180.0/pif;
+    //     index = (int) (4.0*angle);
+    //     // #pragma omp atomic
+    //     histogram_RR[index] += 2;
+
+    //   }
+
+    // }
+
+    // histogram_RR[0] += 100000;
+
+    // // #pragma omp parallel for private(j)
+    // for(i = 0; i < 1000; ++i) {
+    //   for(j = i+1; j < 1000; ++j) {
+
+    //     angle = acos()*180.0/pif;
+    //     index = (int) (4.0*angle);
+    //     // #pragma omp atomic
+    //     histogram_DD[index] += 2;
+
+    //   }
+
+    // }
+
+    // histogram_DD[0] += 100000;
+
+    // ////////
 
 
 
@@ -99,58 +153,57 @@ int main(int argc, char* argv[])
 
 
 
+//     // check point: the sum of all historgram entries should be 10 000 000 000
+//     long int histsum = 0L;
+//     int      correct_value=1;
+//     for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
+//     printf("   Histogram DD : sum = %ld\n",histsum);
+//     if ( histsum != 10000000000L ) correct_value = 0;
 
-    // check point: the sum of all historgram entries should be 10 000 000 000
-    long int histsum = 0L;
-    int      correct_value=1;
-    for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
-    printf("   Histogram DD : sum = %ld\n",histsum);
-    if ( histsum != 10000000000L ) correct_value = 0;
+//     histsum = 0L;
+//     for ( int i = 0; i < 360; ++i ) histsum += histogram_DR[i];
+//     printf("   Histogram DR : sum = %ld\n",histsum);
+//     if ( histsum != 10000000000L ) correct_value = 0;
 
-    histsum = 0L;
-    for ( int i = 0; i < 360; ++i ) histsum += histogram_DR[i];
-    printf("   Histogram DR : sum = %ld\n",histsum);
-    if ( histsum != 10000000000L ) correct_value = 0;
+//     histsum = 0L;
+//     for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
+//     printf("   Histogram RR : sum = %ld\n",histsum);
+//     if ( histsum != 10000000000L ) correct_value = 0;
 
-    histsum = 0L;
-    for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
-    printf("   Histogram RR : sum = %ld\n",histsum);
-    if ( histsum != 10000000000L ) correct_value = 0;
+//     if ( correct_value != 1 ) 
+//        {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
 
-    if ( correct_value != 1 ) 
-       {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
+//     printf("   Omega values for the histograms:\n");
+//     float omega[360];
+//     for ( int i = 0; i < 10; ++i ) 
+//         if ( histogram_RR[i] != 0L )
+//            {
+//            omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
+//            if ( i < 10 ) printf("      angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
+//            }
 
-    printf("   Omega values for the histograms:\n");
-    float omega[360];
-    for ( int i = 0; i < 10; ++i ) 
-        if ( histogram_RR[i] != 0L )
-           {
-           omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
-           if ( i < 10 ) printf("      angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
-           }
-
-    FILE *out_file = fopen(argv[3],"w");
-    if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
-    else
-       {
-       for ( int i = 0; i < 360; ++i ) 
-           if ( hist_RR[i] != 0L )
-              fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
-       fclose(out_file);
-       printf("   Omega values written to file %s\n",argv[3]);
-       }
+//     FILE *out_file = fopen(argv[3],"w");
+//     if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
+//     else
+//        {
+//        for ( int i = 0; i < 360; ++i ) 
+//            if ( hist_RR[i] != 0L )
+//               fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
+//        fclose(out_file);
+//        printf("   Omega values written to file %s\n",argv[3]);
+//        }
        
 
-    free(real_rasc); free(real_decl);
-    free(rand_rasc); free(rand_decl);
+//     free(real_rasc); free(real_decl);
+//     free(rand_rasc); free(rand_decl);
 
-    printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
-    gettimeofday(&_ttime, &_tzone);
-    double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+//     printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
+//     gettimeofday(&_ttime, &_tzone);
+//     double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
 
-    printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
+//     printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
 
-    return(0);
+//     return(0);
 }
 
 
@@ -233,6 +286,7 @@ int parseargs_readinput(int argc, char *argv[])
 
     return(0);
     }
+
 
 
 
