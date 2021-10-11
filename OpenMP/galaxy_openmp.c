@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
     {
     // declaring functions
     int parseargs_readinput(int argc, char *argv[]);
-    // float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2);
-    // int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
+    float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2);
+    int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
 //     struct timeval _ttime;
 //     struct timezone _tzone;
@@ -60,18 +60,18 @@ int main(int argc, char* argv[])
     rand_rasc        = (float *)calloc(100000L, sizeof(float));
     rand_decl        = (float *)calloc(100000L, sizeof(float));
 
-//     MemoryAllocatedCPU += 10L*100000L*sizeof(float);
+    MemoryAllocatedCPU += 10L*100000L*sizeof(float);
 
-//     printf(" About to start reading in\n");
+    printf(" About to start reading in\n");
 
 //     // read input data from files given on the command line
     if ( parseargs_readinput(argc, argv) != 0 ) {printf("   Program stopped.\n");return(0);}
     printf("   Input data read, now calculating histograms\n");
 
-//     long int histogram_DD[360] = {0L};
-//     long int histogram_DR[360] = {0L};
-//     long int histogram_RR[360] = {0L};
-//     MemoryAllocatedCPU += 3L*360L*sizeof(long int);
+    long int histogram_DD[360] = {0L};
+    long int histogram_DR[360] = {0L};
+    long int histogram_RR[360] = {0L};
+    MemoryAllocatedCPU += 3L*360L*sizeof(long int);
     
 // //  Your code to calculate angles and filling the histograms
 // //  helpful hint: there are no angles above 90 degrees!
@@ -79,34 +79,34 @@ int main(int argc, char* argv[])
 // //  histogram[1] covers  0.25 <=  angle  <   0.50
 // //  and so on until     89.75 <=  angle  <= 90.0
 
-//     int i,j;
-//     int index;
-//     double angle,inputAngle;
-//     int count = 0;
+    int i,j;
+    int index;
+    double angle,inputAngle;
+    int count = 0;
 
-//     int limit = 100000;
+    int limit = 100000;
 
-//     printf("Starting calculations");
+    printf("Starting calculations");
 
 
-//      // for DR
-//     #pragma omp parallel for private(j)
-//     for(i = 0; i < limit; ++i) 
-//     {
-//       for(j =0; j < limit; ++j) 
-//       {
-//         count++;
-//         if(i == j) {
-//           #pragma omp atomic
-//           ++histogram_DR[0];
-//           continue;
-//         }
-//         index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
+     // for DR
+    #pragma omp parallel for private(j)
+    for(i = 0; i < limit; ++i) 
+    {
+      for(j =0; j < limit; ++j) 
+      {
+        count++;
+        if(i == j) {
+          #pragma omp atomic
+          ++histogram_DR[0];
+          continue;
+        }
+        // index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
         
-//         #pragma omp atomic
-//         ++histogram_DR[index];
-//       }
-//     }
+        // #pragma omp atomic
+        // ++histogram_DR[index];
+      }
+    }
 
 //     printf("Finished calculation for DR");
 //     ///////////////////////////////////////////
@@ -201,33 +201,33 @@ int main(int argc, char* argv[])
     return(0);
 }
 
-// float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
-//     {
-//         float inputAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
-//         if(inputAngle > 1)
-//           inputAngle = 1.0;
-//         else if(inputAngle < -1)
-//           inputAngle = -1.0;
+float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
+    {
+        float inputAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
+        if(inputAngle > 1)
+          inputAngle = 1.0;
+        else if(inputAngle < -1)
+          inputAngle = -1.0;
 
-//         return inputAngle;
-//     }
+        return inputAngle;
+    }
 
   
 
-// int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
-//     {
-//         float inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
+    {
+        float inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
 
-//         float angle = acos(inputAngle)*180.0/pif;
+        float angle = acos(inputAngle)*180.0/pif;
 
 
-//         int index;
+        int index;
         
    
-//         index = (int) (4.0*angle);
+        index = (int) (4.0*angle);
 
-//         return index;
-//     }
+        return index;
+    }
 
 
 int parseargs_readinput(int argc, char *argv[])
