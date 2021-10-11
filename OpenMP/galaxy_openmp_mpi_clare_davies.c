@@ -1,5 +1,5 @@
 // How to Compile:
-// cd to folder /Users/claredavies/Dropbox/EDISS1stYear/1stSemesterFinland/Parallel/OpenMP
+// cd to folder /Users/claredavies/Dropbox/EDISS1stYear/1stSemesterFinland/Parallel/OpenMP/OpenMP
 // gcc -o GalaxyOpenMP galaxy_openmp_mpi_clare_davies.c
 // ./GalaxyOpenMP
 
@@ -39,8 +39,8 @@ int main(int argc, char* argv[])
 
     // declaring functions
     int parseargs_readinput(int argc, char *argv[]);
-    double get_input_angle(long real_rasc, long real_decl, long rand_rasc, long rand_decl);
-    int get_index(long rasc_1, long decl_1, long rasc_2, long decl_2);
+    float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2);
+    int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
     struct timeval _ttime;
     struct timezone _tzone;
@@ -82,12 +82,14 @@ int main(int argc, char* argv[])
     double angle,inputAngle;
     int count = 0;
 
+    int limit = 1000;
+
 
      // for DR
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 100000; ++i) 
+    for(i = 0; i < limit; ++i) 
     {
-      for(j =0; j < 100000; ++j) 
+      for(j =0; j < limit; ++j) 
       {
         count++;
         if(i == j) {
@@ -95,25 +97,20 @@ int main(int argc, char* argv[])
           ++histogram_DR[0];
           continue;
         }
-        index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_rasc[j]);
-
-        // printf("index is:::   %f", angle);
-        // printf("angle is:::   %d", index);
+        index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
         
         // #pragma omp atomic
         ++histogram_DR[index];
-
       }
       printf("at loop set 1 : %d\n", i);
     }
-    printf("The count is: %d\n", count);
 
 
-    // ///////////////////////////////////////////
-    // // for RR
+    ///////////////////////////////////////////
+    // for RR
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 100000; ++i) {
-      for(j = i+1; j < 100000; ++j) {
+    for(i = 0; i < limit; ++i) {
+      for(j = i+1; j < limit; ++j) {
         index = get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j]);
         // #pragma omp atomic
         histogram_RR[index] += 2;
@@ -121,13 +118,13 @@ int main(int argc, char* argv[])
       printf("at loop set 2 : %d\n", i);
 
     }
-    histogram_RR[0] += 100000;
+    histogram_RR[0] += limit;
 
     // // for DD
     // #pragma omp parallel for private(j)
-    for(i = 0; i < 100000; ++i) {
-      for(j = i+1; j < 100000; ++j) {
-        index = get_index(rand_rasc[i], rand_rasc[i], rand_rasc[j], rand_rasc[j]);
+    for(i = 0; i < limit; ++i) {
+      for(j = i+1; j < limit; ++j) {
+        index = get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j]);
 
         // #pragma omp atomic
         histogram_DD[index] += 2;
@@ -135,10 +132,10 @@ int main(int argc, char* argv[])
       }
       printf("at loop set 3 : %d\n", i);
     }
-    histogram_DD[0] += 100000;
+    histogram_DD[0] += limit;
 
 
-//     // check point: the sum of all historgram entries should be 10 000 000 000
+    // check point: the sum of all historgram entries should be 10 000 000 000
     long int histsum = 0L;
     int      correct_value=1;
     for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
@@ -159,43 +156,51 @@ int main(int argc, char* argv[])
     if ( correct_value != 1 ) 
        {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
 
-//     printf("   Omega values for the histograms:\n");
-//     float omega[360];
-//     for ( int i = 0; i < 10; ++i ) 
-//         if ( histogram_RR[i] != 0L )
-//            {
-//            omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
-//            if ( i < 10 ) printf("      angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
-//            }
 
-//     FILE *out_file = fopen(argv[3],"w");
-//     if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
-//     else
-//        {
-//        for ( int i = 0; i < 360; ++i ) 
-//            if ( hist_RR[i] != 0L )
-//               fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
-//        fclose(out_file);
-//        printf("   Omega values written to file %s\n",argv[3]);
-//        }
+
+    printf("   Omega values for the histograms:\n");
+    float omega[360];
+    for ( int i = 0; i < 360; ++i ) 
+    {
+        if ( histogram_RR[i] != 0L )
+        {
+           omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
+           if ( i < 10 ) 
+            printf("   angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
+        }
+    }
+
+    FILE *out_file = fopen(argv[3],"w");
+    if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
+    else
+       {
+       for ( int i = 0; i < 360; ++i ) 
+       {
+           if ( histogram_RR[i] != 0L )
+              fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
+       }
+          
+       fclose(out_file);
+       printf("   Omega values written to file %s\n",argv[3]);
+       }
        
 
-//     free(real_rasc); free(real_decl);
-//     free(rand_rasc); free(rand_decl);
+    free(real_rasc); free(real_decl);
+    free(rand_rasc); free(rand_decl);
 
-//     printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
-//     gettimeofday(&_ttime, &_tzone);
-//     double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+    printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
+    gettimeofday(&_ttime, &_tzone);
+    double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
 
-//     printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
+    printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
 
-//     return(0);
+    return(0);
 }
 
-double get_input_angle(long rasc_1, long decl_1, long rasc_2, long decl_2)
+float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
-        double inputAngle = sin(decl_1)*sin( decl_2)+cos(decl_1)*cos(decl_2)*cos(rasc_1-rasc_2);
-        
+        float inputAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
+
         if(inputAngle > 1)
           inputAngle = 1.0;
         else if(inputAngle < -1)
@@ -206,11 +211,12 @@ double get_input_angle(long rasc_1, long decl_1, long rasc_2, long decl_2)
 
   
 
-int get_index(long rasc_1, long decl_1, long rasc_2, long decl_2)
+int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
-        double inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+        float inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
 
-        double angle = acos(inputAngle)*180.0/pif;
+        float angle = acos(inputAngle)*180.0/pif;
+
 
         int index;
         
@@ -260,6 +266,7 @@ int parseargs_readinput(int argc, char *argv[])
 	         }
 	      real_rasc[i] = rasc*arcmin2rad;
 	      real_decl[i] = decl*arcmin2rad;
+
 	      }
            fclose(real_data_file);
 	   printf("   Successfully read 100000 lines from %s\n",argv[1]);
