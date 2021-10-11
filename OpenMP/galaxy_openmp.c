@@ -79,14 +79,13 @@ int main(int argc, char* argv[])
 // //  histogram[1] covers  0.25 <=  angle  <   0.50
 // //  and so on until     89.75 <=  angle  <= 90.0
 
-    int i,j;
-    int index;
-    double angle,inputAngle;
+    int i,j,k,l,m,n;
+    int index = 0;
     int count = 0;
 
-    int limit = 100000;
+    int limit = 1000;
 
-    printf("Starting calculations");
+    printf("Starting calculations \n");
 
 
      // for DR
@@ -101,96 +100,96 @@ int main(int argc, char* argv[])
           ++histogram_DR[0];
           continue;
         }
-        // index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
+        index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
         
-        // #pragma omp atomic
-        // ++histogram_DR[index];
+        #pragma omp atomic
+        ++histogram_DR[index];
       }
     }
 
-//     printf("Finished calculation for DR");
-//     ///////////////////////////////////////////
-//     // for RR
-//     #pragma omp parallel for private(j)
-//     for(i = 0; i < limit; ++i) {
-//       for(j = i+1; j < limit; ++j) {
-//         index = get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j]);
-//         #pragma omp atomic
-//         histogram_RR[index] += 2;
-//       }
+    printf("Finished calculation for DR \n");
+    ///////////////////////////////////////////
+    // for RR
+    #pragma omp parallel for private(l)
+    for(k = 0; k < limit; ++k) {
+      for(l = k+1; l < limit; ++l) {
+        index = get_index(real_rasc[k], real_decl[k], real_rasc[l], real_decl[l]);
+        #pragma omp atomic
+        histogram_RR[index] += 2;
+      }
 
-//     }
-//     histogram_RR[0] += limit;
-//     printf("Finished calculation for RR");
-
-
-//     // // for DD
-//     #pragma omp parallel for private(j)
-//     for(i = 0; i < limit; ++i) {
-//       for(j = i+1; j < limit; ++j) {
-//         index = get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j]);
-
-//         #pragma omp atomic
-//         histogram_DD[index] += 2;
-
-//       }
-//     }
-//     histogram_DD[0] += limit;
-//     printf("Finished calculation for DD");
+    }
+    histogram_RR[0] += limit;
+    printf("Finished calculation for RR \n");
 
 
-//     // check point: the sum of all historgram entries should be 10 000 000 000
-//     long int histsum = 0L;
-//     int      correct_value=1;
-//     for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
-//     printf("   Histogram DD : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
+    // // for DD
+    #pragma omp parallel for private(n)
+    for(m = 0; m < limit; ++m) {
+      for(n = m+1; n < limit; ++n) {
+        index = get_index(rand_rasc[m], rand_decl[m], rand_rasc[n], rand_decl[n]);
 
-//     histsum = 0L;
-//     for ( int i = 0; i < 360; ++i ) 
-//       histsum += histogram_DR[i];
-//     printf("   Histogram DR : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
+        #pragma omp atomic
+        histogram_DD[index] += 2;
 
-//     histsum = 0L;
-//     for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
-//     printf("   Histogram RR : sum = %ld\n",histsum);
-//     if ( histsum != 10000000000L ) correct_value = 0;
-
-//     if ( correct_value != 1 ) 
-//        {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
+      }
+    }
+    histogram_DD[0] += limit;
+    printf("Finished calculation for DD \n");
 
 
+    // check point: the sum of all historgram entries should be 10 000 000 000
+    long int histsum = 0L;
+    int      correct_value=1;
+    for ( int i = 0; i < 360; ++i ) histsum += histogram_DD[i];
+    printf("   Histogram DD : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
 
-//     printf("   Omega values for the histograms:\n");
-//     float omega[360];
-//     for ( int i = 0; i < 360; ++i ) 
-//     {
-//         if ( histogram_RR[i] != 0L )
-//         {
-//            omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
-//            if ( i < 10 ) 
-//             printf("   angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
-//         }
-//     }
+    histsum = 0L;
+    for ( int i = 0; i < 360; ++i ) 
+      histsum += histogram_DR[i];
+    printf("   Histogram DR : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
 
-//     FILE *out_file = fopen(argv[3],"w");
-//     if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
-//     else
-//        {
-//        for ( int i = 0; i < 360; ++i ) 
-//        {
-//            if ( histogram_RR[i] != 0L )
-//               fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
-//        }
+    histsum = 0L;
+    for ( int i = 0; i < 360; ++i ) histsum += histogram_RR[i];
+    printf("   Histogram RR : sum = %ld\n",histsum);
+    if ( histsum != 10000000000L ) correct_value = 0;
+
+    if ( correct_value != 1 ) 
+       {printf("   Histogram sums should be 10000000000. Ending program prematurely\n");return(0);}
+
+
+
+    printf("   Omega values for the histograms:\n");
+    float omega[360];
+    for ( int i = 0; i < 360; ++i ) 
+    {
+        if ( histogram_RR[i] != 0L )
+        {
+           omega[i] = (histogram_DD[i] - 2L*histogram_DR[i] + histogram_RR[i])/((float)(histogram_RR[i]));
+           if ( i < 10 ) 
+            printf("   angle %.2f deg. -> %.2f deg. : %.3f\n", i*0.25, (i+1)*0.25, omega[i]);
+        }
+    }
+
+    FILE *out_file = fopen(argv[3],"w");
+    if ( out_file == NULL ) printf("   ERROR: Cannot open output file %s\n",argv[3]);
+    else
+       {
+       for ( int i = 0; i < 360; ++i ) 
+       {
+           if ( histogram_RR[i] != 0L )
+              fprintf(out_file,"%.2f  : %.3f\n", i*0.25, omega[i] ); 
+       }
           
-//        fclose(out_file);
-//        printf("   Omega values written to file %s\n",argv[3]);
-//        }
+       fclose(out_file);
+       printf("   Omega values written to file %s\n",argv[3]);
+       }
        
 
-//     free(real_rasc); free(real_decl);
-//     free(rand_rasc); free(rand_decl);
+    free(real_rasc); free(real_decl);
+    free(rand_rasc); free(rand_decl);
 
 //     printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
 //     gettimeofday(&_ttime, &_tzone);
@@ -203,30 +202,31 @@ int main(int argc, char* argv[])
 
 float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
-        float inputAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
-        if(inputAngle > 1)
-          inputAngle = 1.0;
-        else if(inputAngle < -1)
-          inputAngle = -1.0;
+        float calcAngle = 0.00;
+        // WHERE ISSUE IS (WON'T RUN DIONE)
+        // calcAngle = ((sinf(decl_1)*sinf(decl_2))+(cosf(decl_1)*cosf(decl_2))*cosf(rasc_1-rasc_2));
+        
+        if(calcAngle > 1.0)
+          calcAngle = 1.0;
+        else if(calcAngle < -1.0)
+          calcAngle = -1.0;
 
-        return inputAngle;
+        return calcAngle;
     }
 
   
 
 int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
-        float inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+        float inputAngle = 0.00;
+        inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
 
         float angle = acos(inputAngle)*180.0/pif;
 
+        int index_calc = 0;
+        index_calc = (int) (4.0*angle);
 
-        int index;
-        
-   
-        index = (int) (4.0*angle);
-
-        return index;
+        return index_calc;
     }
 
 
