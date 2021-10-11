@@ -15,7 +15,7 @@
 // For OpemMP programs, compile with
 //    gcc -O3 -fopenmp -o galaxy_openmp galaxy_openmp.c -lm
 // and run with 
-//    srun -N 1 -c 40 ./galaxy_openmp RealGalaxies_100k_arcmin.dat SyntheticGalaxies_100k_arcmin.dat omega.out
+//    srun -N 1 -c 40 ./galaxy_openmp RealGalaxies_100k_arcmin.txt SyntheticGalaxies_100k_arcmin.txt output.txt
 //
 //
 // For MPI programs, compile with
@@ -42,13 +42,15 @@ int main(int argc, char* argv[])
     float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2);
     int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
-    struct timeval _ttime;
-    struct timezone _tzone;
+    printf("Here 1");
+
+    // struct timeval  _ttime;
+    // struct timezone _tzone;
 
     pif = acosf(-1.0f);
 
-    gettimeofday(&_ttime, &_tzone);
-    double time_start = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+    // gettimeofday(&_ttime, &_tzone);
+    // double time_start = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
 
     // store right ascension and declination for real galaxies here
     // Note: indices run from 0 to 99999 = 100000-1: realrasc[0] -> realrasc[99999] 
@@ -82,57 +84,63 @@ int main(int argc, char* argv[])
     double angle,inputAngle;
     int count = 0;
 
-    int limit = 1000;
+    int limit = 100000;
+
+    printf("Starting calculations");
 
 
-     // for DR
-    // #pragma omp parallel for private(j)
+    //  // for DR
+    #pragma omp parallel for private(j)
     for(i = 0; i < limit; ++i) 
     {
       for(j =0; j < limit; ++j) 
       {
         count++;
         if(i == j) {
-          // #pragma omp atomic
+          #pragma omp atomic
           ++histogram_DR[0];
           continue;
         }
         index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
         
-        // #pragma omp atomic
+        #pragma omp atomic
         ++histogram_DR[index];
       }
-      printf("at loop set 1 : %d\n", i);
     }
 
-
+    printf("Finished calculation for DR");
     ///////////////////////////////////////////
     // for RR
-    // #pragma omp parallel for private(j)
+    #pragma omp parallel for private(j)
     for(i = 0; i < limit; ++i) {
       for(j = i+1; j < limit; ++j) {
         index = get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j]);
-        // #pragma omp atomic
+        #pragma omp atomic
         histogram_RR[index] += 2;
       }
-      printf("at loop set 2 : %d\n", i);
+      if(i%1000 == 0)
+        printf("still running through loop set 2 and at: %d\n", i);
 
     }
     histogram_RR[0] += limit;
+    printf("Finished calculation for RR");
+
 
     // // for DD
-    // #pragma omp parallel for private(j)
+    #pragma omp parallel for private(j)
     for(i = 0; i < limit; ++i) {
       for(j = i+1; j < limit; ++j) {
         index = get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j]);
 
-        // #pragma omp atomic
+        #pragma omp atomic
         histogram_DD[index] += 2;
 
       }
-      printf("at loop set 3 : %d\n", i);
+      if(i%1000 == 0)
+        printf("still running through loop set 3 and at: %d\n", i);
     }
     histogram_DD[0] += limit;
+    printf("Finished calculation for DD");
 
 
     // check point: the sum of all historgram entries should be 10 000 000 000
@@ -189,10 +197,10 @@ int main(int argc, char* argv[])
     free(rand_rasc); free(rand_decl);
 
     printf("   Total memory allocated = %.1lf MB\n",MemoryAllocatedCPU/1000000.0);
-    gettimeofday(&_ttime, &_tzone);
-    double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+    // gettimeofday(&_ttime, &_tzone);
+    // double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
 
-    printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
+    // printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
 
     return(0);
 }
@@ -200,7 +208,6 @@ int main(int argc, char* argv[])
 float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
         float inputAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
-
         if(inputAngle > 1)
           inputAngle = 1.0;
         else if(inputAngle < -1)
@@ -220,11 +227,8 @@ int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
 
         int index;
         
-        if(angle < 0.25)
-          index = 1;
-
-        else
-          index = (int) (4.0*angle);
+   
+        index = (int) (4.0*angle);
 
         return index;
     }
