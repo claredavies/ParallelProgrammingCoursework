@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     int index = 0;
     int count = 0;
 
-    int limit = 10;
+    int limit = 100;
 
     printf("Starting calculations \n");
 
@@ -126,7 +126,6 @@ int main(int argc, char* argv[])
     for(m = 0; m < limit; ++m) {
       for(n = m+1; n < limit; ++n) {
       	count++;
-      	printf("at index %d\n", n);
 
         #pragma omp atomic
         histogram_DD[get_index(rand_rasc[m],rand_decl[m],rand_rasc[n],rand_decl[n])] += 2;
@@ -135,7 +134,6 @@ int main(int argc, char* argv[])
     }
     #pragma omp atomic
     histogram_DD[0] += limit;
-    printf("Count  %d\n", count);
     printf("Finished calculation for DD \n");
 
 
@@ -207,7 +205,7 @@ int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
        
         float calcAngle = 0;
 
-    	// calcAngle = ((sinf(decl_1)*sinf(decl_2))+(cosf(decl_1)*cosf(decl_2))*cosf(rasc_1-rasc_2));
+    	calcAngle = ((sin(decl_1)*sin(decl_2))+(cos(decl_1)*cos(decl_2))*cos(rasc_1-rasc_2));
 
    		if(calcAngle > 1.0)
           calcAngle = 1.0;
