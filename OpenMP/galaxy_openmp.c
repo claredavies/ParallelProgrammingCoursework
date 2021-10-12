@@ -93,12 +93,7 @@ int main(int argc, char* argv[])
     {
       for(j =0; j < limit; ++j) 
       {
-        if(i == j) {
-          #pragma omp atomic
-          ++histogram_DR[0];
-          continue;
-        }
-     
+
         #pragma omp atomic
         ++histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])];
       }
@@ -112,11 +107,10 @@ int main(int argc, char* argv[])
       for(l = k+1; l < limit; ++l) {
         
         #pragma omp atomic
-        histogram_RR[get_index(real_rasc[k], real_decl[k], real_rasc[l], real_decl[l])] += 2;
+        histogram_RR[get_index(rand_rasc[k], rand_decl[k], rand_rasc[l], rand_decl[l])] += 2;
       }
 
     }
-    #pragma omp atomic
     histogram_RR[0] += limit;
     printf("Finished calculation for RR \n");
 
@@ -128,11 +122,10 @@ int main(int argc, char* argv[])
       	count++;
 
         #pragma omp atomic
-        histogram_DD[get_index(rand_rasc[m],rand_decl[m],rand_rasc[n],rand_decl[n])] += 2;
+        histogram_DD[get_index(real_rasc[m],real_decl[m],real_rasc[n],real_decl[n])] += 2;
 
       }
     }
-    #pragma omp atomic
     histogram_DD[0] += limit;
     printf("Finished calculation for DD \n");
 
