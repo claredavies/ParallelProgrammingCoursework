@@ -38,7 +38,6 @@ int main(int argc, char* argv[])
     {
     // declaring functions
     int parseargs_readinput(int argc, char *argv[]);
-    float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2);
     int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
 //     struct timeval _ttime;
@@ -83,7 +82,7 @@ int main(int argc, char* argv[])
     int index = 0;
     int count = 0;
 
-    int limit = 1000;
+    int limit = 10;
 
     printf("Starting calculations \n");
 
@@ -94,31 +93,30 @@ int main(int argc, char* argv[])
     {
       for(j =0; j < limit; ++j) 
       {
-        count++;
         if(i == j) {
           #pragma omp atomic
           ++histogram_DR[0];
           continue;
         }
-        index = get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j]);
-        
+     
         #pragma omp atomic
-        ++histogram_DR[index];
+        ++histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])];
       }
     }
 
-    printf("Finished calculation for DR \n");
-    ///////////////////////////////////////////
-    // for RR
+    // printf("Finished calculation for DR \n");
+    // ///////////////////////////////////////////
+    // // for RR
     #pragma omp parallel for private(l)
     for(k = 0; k < limit; ++k) {
       for(l = k+1; l < limit; ++l) {
-        index = get_index(real_rasc[k], real_decl[k], real_rasc[l], real_decl[l]);
+        
         #pragma omp atomic
-        histogram_RR[index] += 2;
+        histogram_RR[get_index(real_rasc[k], real_decl[k], real_rasc[l], real_decl[l])] += 2;
       }
 
     }
+    #pragma omp atomic
     histogram_RR[0] += limit;
     printf("Finished calculation for RR \n");
 
@@ -127,14 +125,17 @@ int main(int argc, char* argv[])
     #pragma omp parallel for private(n)
     for(m = 0; m < limit; ++m) {
       for(n = m+1; n < limit; ++n) {
-        index = get_index(rand_rasc[m], rand_decl[m], rand_rasc[n], rand_decl[n]);
+      	count++;
+      	printf("at index %d\n", n);
 
         #pragma omp atomic
-        histogram_DD[index] += 2;
+        histogram_DD[get_index(rand_rasc[m],rand_decl[m],rand_rasc[n],rand_decl[n])] += 2;
 
       }
     }
+    #pragma omp atomic
     histogram_DD[0] += limit;
+    printf("Count  %d\n", count);
     printf("Finished calculation for DD \n");
 
 
@@ -200,33 +201,20 @@ int main(int argc, char* argv[])
     return(0);
 }
 
-float get_input_angle(float rasc_1, float decl_1, float rasc_2, float decl_2)
-    {
-        float calcAngle = 0.00;
-        // WHERE ISSUE IS (WON'T RUN DIONE)
-        // calcAngle = ((sinf(decl_1)*sinf(decl_2))+(cosf(decl_1)*cosf(decl_2))*cosf(rasc_1-rasc_2));
-        
-        if(calcAngle > 1.0)
-          calcAngle = 1.0;
-        else if(calcAngle < -1.0)
-          calcAngle = -1.0;
-
-        return calcAngle;
-    }
-
-  
 
 int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
     {
-        float inputAngle = 0.00;
-        inputAngle = get_input_angle(rasc_1, decl_1, rasc_2, decl_2);
+       
+        float calcAngle = 0;
 
-        float angle = acos(inputAngle)*180.0/pif;
+    	// calcAngle = ((sinf(decl_1)*sinf(decl_2))+(cosf(decl_1)*cosf(decl_2))*cosf(rasc_1-rasc_2));
 
-        int index_calc = 0;
-        index_calc = (int) (4.0*angle);
-
-        return index_calc;
+   		if(calcAngle > 1.0)
+          calcAngle = 1.0;
+        else if(calcAngle < -1.0)
+          calcAngle = -1.0;
+    
+        return (int) 4*acos(calcAngle)*180.0/pif;
     }
 
 
@@ -254,24 +242,24 @@ int parseargs_readinput(int argc, char *argv[])
           return(1);
           }
        else
-	  {
+    {
           fscanf(real_data_file,"%d",&Number_of_Galaxies);
           for ( int i = 0; i < 100000; ++i ) 
               {
-      	      float rasc, decl;
-	      if ( fscanf(real_data_file,"%f %f", &rasc, &decl ) != 2 )
-	         {
+              float rasc, decl;
+        if ( fscanf(real_data_file,"%f %f", &rasc, &decl ) != 2 )
+           {
                  printf("   ERROR: Cannot read line %d in real data file %s\n",i+1,argv[1]);
                  fclose(real_data_file);
-	         return(1);
-	         }
-	      real_rasc[i] = rasc*arcmin2rad;
-	      real_decl[i] = decl*arcmin2rad;
+           return(1);
+           }
+        real_rasc[i] = rasc*arcmin2rad;
+        real_decl[i] = decl*arcmin2rad;
 
-	      }
+        }
            fclose(real_data_file);
-	   printf("   Successfully read 100000 lines from %s\n",argv[1]);
-	   }
+     printf("   Successfully read 100000 lines from %s\n",argv[1]);
+     }
 
        rand_data_file = fopen(argv[2],"r");
        if ( rand_data_file == NULL ) 
@@ -281,23 +269,23 @@ int parseargs_readinput(int argc, char *argv[])
           return(1);
           }
        else 
-	  {
+    {
           fscanf(rand_data_file,"%d",&Number_of_Galaxies);
           for ( int i = 0; i < 100000; ++i ) 
               {
-      	      float rasc, decl;
-	      if ( fscanf(rand_data_file,"%f %f", &rasc, &decl ) != 2 )
-	         {
+              float rasc, decl;
+        if ( fscanf(rand_data_file,"%f %f", &rasc, &decl ) != 2 )
+           {
                  printf("   ERROR: Cannot read line %d in real data file %s\n",i+1,argv[2]);
                  fclose(rand_data_file);
-	         return(1);
-	         }
-	      rand_rasc[i] = rasc*arcmin2rad;
-	      rand_decl[i] = decl*arcmin2rad;
-	      }
+           return(1);
+           }
+        rand_rasc[i] = rasc*arcmin2rad;
+        rand_decl[i] = decl*arcmin2rad;
+        }
           fclose(rand_data_file);
-	  printf("   Successfully read 100000 lines from %s\n",argv[2]);
-	  }
+    printf("   Successfully read 100000 lines from %s\n",argv[2]);
+    }
        out_file = fopen(argv[3],"w");
        if ( out_file == NULL ) 
           {
@@ -310,7 +298,6 @@ int parseargs_readinput(int argc, char *argv[])
 
     return(0);
     }
-
 
 
 
