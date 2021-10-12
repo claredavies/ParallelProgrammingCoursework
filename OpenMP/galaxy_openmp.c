@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     int index = 0;
     int count = 0;
 
-    int limit = 100;
+    int limit = 100000;
 
     printf("Starting calculations \n");
 
