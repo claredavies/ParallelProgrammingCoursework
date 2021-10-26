@@ -43,13 +43,13 @@ int main (int argc, char *argv[])
 
     pif = acosf(-1.0f);
 
-	long int histogram_DD[360] = {0L};
+	  long int histogram_DD[360] = {0L};
     long int histogram_DR[360] = {0L};
     long int histogram_RR[360] = {0L};
 
-	long int histogram_DD_total[360] = {0L};
-	long int histogram_DR_total[360] = {0L};
-	long int histogram_RR_total[360] = {0L};
+  	long int histogram_DD_total[360] = {0L};
+  	long int histogram_DR_total[360] = {0L};
+  	long int histogram_RR_total[360] = {0L};
 
     real_rasc        = (float *)calloc(100000L, sizeof(float));
     real_decl        = (float *)calloc(100000L, sizeof(float));
@@ -59,82 +59,105 @@ int main (int argc, char *argv[])
     MemoryAllocatedCPU += 10L*100000L*sizeof(float);
 
 	
-	int total_proc;	 // total nuber of processes	
-	int rank;        // rank of each process
-	int n_per_proc;	// elements per process	
-	int n = ARRAY_SIZE;   // number of array elements
-	int i,j;       // loop index
-	int limit = 10;
-	int count = 0;
+  	int total_proc;	 // total nuber of processes	
+  	int rank;        // rank of each process
+  	int n_per_proc;	// elements per process	
+  	int n = ARRAY_SIZE;   // number of array elements
+  	int i,j;       // loop index
+  	int limit = 10;
+  	int count = 0;
 
-	MPI_Status status;   // not used in this arguably poor example
-	                     // that is devoid of error checking.
+  	MPI_Status status;   // not used in this arguably poor example
+  	                     // that is devoid of error checking.
 
-	// 1. Initialization of MPI environment
-	MPI_Init (&argc, &argv);
-	MPI_Comm_size (MPI_COMM_WORLD, &total_proc);
-	// 2. Now you know the total number of processes running in parallel
-	MPI_Comm_rank (MPI_COMM_WORLD,&rank);
-	// 3. Now you know the rank of the current process
+  	// 1. Initialization of MPI environment
+  	MPI_Init (&argc, &argv);
+  	MPI_Comm_size (MPI_COMM_WORLD, &total_proc);
+  	// 2. Now you know the total number of processes running in parallel
+  	MPI_Comm_rank (MPI_COMM_WORLD,&rank);
+  	// 3. Now you know the rank of the current process
+  	
+  	// 4. We choose process rank 0 to be the root, or master,
+  	// which will be used to  initialize the full arrays.
+  	if (rank == MASTER)  {
+  	    if ( parseargs_readinput(argc, argv) != 0 ) {
+  	    	printf("   Program stopped.\n");return(0);
+  	    }
+      	printf("Input data read, now calculating histograms\n");
+  	}
+  	n_per_proc = n/total_proc;
 	
-	// 4. We choose process rank 0 to be the root, or master,
-	// which will be used to  initialize the full arrays.
-	if (rank == MASTER)  {
-		real_rasc        = (float *)calloc(100000L, sizeof(float));
-	    real_decl        = (float *)calloc(100000L, sizeof(float));
-	    rand_rasc        = (float *)calloc(100000L, sizeof(float));
-	    rand_decl        = (float *)calloc(100000L, sizeof(float));
-
-	    if ( parseargs_readinput(argc, argv) != 0 ) {
-	    	printf("   Program stopped.\n");return(0);
-	    }
-    	printf("Input data read, now calculating histograms\n");
-	}
-	n_per_proc = n/total_proc;
+  	// 5. Initialize my smaller subsections of the larger array
+  	real_rasc_d = (float *) malloc(sizeof(float)*n_per_proc);
+  	real_decl_d = (float *) malloc(sizeof(float)*n_per_proc);
+  	rand_rasc_d = (float *) malloc(sizeof(float)*n_per_proc);
+  	rand_decl_d = (float *) malloc(sizeof(float)*n_per_proc);
 	
-	// 5. Initialize my smaller subsections of the larger array
-	real_rasc_d = (float *) malloc(sizeof(float)*n_per_proc);
-	real_decl_d = (float *) malloc(sizeof(float)*n_per_proc);
-	rand_rasc_d = (float *) malloc(sizeof(float)*n_per_proc);
-	rand_decl_d = (float *) malloc(sizeof(float)*n_per_proc);
-	
-	// 6.
-	//scattering array a from MASTER node out to the other nodes
-	MPI_Scatter(real_rasc, n_per_proc, MPI_INT, real_rasc_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	MPI_Scatter(real_decl, n_per_proc, MPI_INT, real_decl_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	MPI_Scatter(rand_rasc, n_per_proc, MPI_INT, rand_rasc_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	MPI_Scatter(rand_decl, n_per_proc, MPI_INT, rand_decl_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  	// 6.
+  	//scattering array a from MASTER node out to the other nodes
+  	MPI_Scatter(real_rasc, n_per_proc, MPI_INT, real_rasc_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  	MPI_Scatter(real_decl, n_per_proc, MPI_INT, real_decl_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  	MPI_Scatter(rand_rasc, n_per_proc, MPI_INT, rand_rasc_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  	MPI_Scatter(rand_decl, n_per_proc, MPI_INT, rand_decl_d, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD); 
 
+    int range = limit/total_proc;
+    int remainder = limit - (range*total_proc);
+    int even_division_remainder = rank%2;
+
+    int end,start;
+   
+    if(rank == MASTER) {
+      start = rank*range;
+      end = start + range;
+    }
+
+    else if(rank == (total_proc-1)){
+      start = (rank*range)+1;
+      end = (start-1) + range + remainder;
+    }
+    
+    else {
+      start = (rank*range)+1;
+      end = (start-1) + range;
+    }
+
+
+    printf ("rank %d \n", rank);
+    printf ("range %d \n", range);
+    printf ("total_proc %d \n", total_proc);
+    printf ("start %d \n", start);
+    printf ("end %d \n", end);
 	// for DR
-    for(i = 0; i < n_per_proc; ++i) 
+    for(i = start; i < end; ++i) 
     {
-      for(j =0; j < n_per_proc; ++j) 
+      for(j =start; j < end; ++j) 
       {
         ++histogram_DR[get_index(real_rasc[j], real_decl[j], rand_rasc[j], rand_decl[j])];
       }
     }
 
     // // for RR
-    for(i = 0; i < n_per_proc; ++i) {
-      for(j = i+1; j < n_per_proc; ++j) {    
-        histogram_RR[get_index(rand_rasc[j], rand_decl[j], rand_rasc[j], rand_decl[j])] += 2;
-      }
-    }
-    histogram_RR[0] += limit;
+    // for(i = 0; i < n_per_proc; ++i) {
+    //   for(j = i+1; j < n_per_proc; ++j) {    
+    //     histogram_RR[get_index(rand_rasc[j], rand_decl[j], rand_rasc[j], rand_decl[j])] += 2;
+    //   }
+    // }
+    // histogram_RR[0] += limit;
 
     // // for DD
-    for(i = 0; i < n_per_proc; ++i) {
-      for(j = i+1; j < n_per_proc; ++j) {  
-      	count++;
-        histogram_DD[get_index(real_rasc[j],real_decl[j],real_rasc[j],real_decl[j])] += 2;
-      }
-    }
-    histogram_DD[0] += limit;
+    // for(i = 0; i < n_per_proc; ++i) {
+    //   for(j = i+1; j < n_per_proc; ++j) {  
+    //   	count++;
+    //     histogram_DD[get_index(real_rasc[j],real_decl[j],real_rasc[j],real_decl[j])] += 2;
+    //   }
+    // }
+    // histogram_DD[0] += limit;
 		
+    // may need to use reduction instead of gather
 	// 8. MASTER node gathering array c from the workers
-	MPI_Gather(histogram_DD_total, n_per_proc, MPI_INT, histogram_DD, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
-	MPI_Gather(histogram_DR_total, n_per_proc, MPI_INT, histogram_DR, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
-	MPI_Gather(histogram_RR_total, n_per_proc, MPI_INT, histogram_RR, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
+	// MPI_Gather(histogram_DD_total, n_per_proc, MPI_INT, histogram_DD, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
+	 MPI_Gather(histogram_DR_total, n_per_proc, MPI_INT, histogram_DR, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
+	// MPI_Gather(histogram_RR_total, n_per_proc, MPI_INT, histogram_RR, n_per_proc, MPI_INT, MASTER, MPI_COMM_WORLD);
 
 /////////////////////// all concurrent processes are finished once they all communicate
 /////////////////////// data back to the master via the gather function.
@@ -166,8 +189,7 @@ int main (int argc, char *argv[])
 	// 9. Terminate MPI Environment and Processes
 	MPI_Finalize();  
 
-
-	    return(0);
+	return(0);
 }
 
 	int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
