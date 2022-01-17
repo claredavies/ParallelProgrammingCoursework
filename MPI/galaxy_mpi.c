@@ -124,14 +124,14 @@ int main (int argc, char *argv[])
     // // for RR
     for(i = start; i <= end; ++i) {
       for(j =0; j < limit; ++j) {   
-           ++histogram_RR[get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j])];
+           ++histogram_RR[get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j])];
       }
     }
 
     // for DD
     for(i = start; i <= end; ++i) {
       for(j =0; j < limit; ++j)  {  
-        ++histogram_DD[get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j])];
+        ++histogram_DD[get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j])];
       }
     }
     
