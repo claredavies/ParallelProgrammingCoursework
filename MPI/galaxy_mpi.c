@@ -61,9 +61,7 @@ int main (int argc, char *argv[])
   	int total_proc;	 // total nuber of processes	
   	int rank;        // rank of each process
   	int i,j;       // loop index
-  	int limit = 5;
-    int result_wanted = limit*limit;
-    printf("   Result wanted %d \n", result_wanted);
+  	int limit = 100000;
 
   	MPI_Status status;   
 
@@ -91,33 +89,24 @@ int main (int argc, char *argv[])
     int end,start;
    
    // at MASTER (rank 0)
+   //covers end values
     if(rank == MASTER) {
-        printf("marker 1 \n");
-
       start = rank*range;
       end = start + range;
     }
 
     // at last rank
+    //cover end values
     else if(rank == (total_proc-1)){
-        printf("marker 2 \n");
         start = rank*range+1;
         end = limit - 1;
     }
     
+    //don't cover end values (covered by master and last rank)
     // at other ranks
     else {
-      printf("marker 3 \n");
-
       start = (rank*range)+1;
-      end = start + range;
-
-      printf("limit -2 %d \n",(limit - 2));
-      printf("start: %d,  end: %d \n",start,end);
-      if(end == (limit - 1)) {
-        end = limit - 2;
-      }
-      printf("Then start: %d,  end: %d \n",start,end);
+      end = start + (range-1);
 
     }
 
@@ -127,24 +116,24 @@ int main (int argc, char *argv[])
     for(i = start; i <= end; ++i) 
     {
       for(j =0; j < limit; ++j) {
-            printf("    i currently:   %d  j currently:  %d \n",i,j);
+            // printf("    i currently:   %d  j currently:  %d \n",i,j);
             ++histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])];
         }
     }
 
-    // // // for RR
-    // for(i = start; i <= end; ++i) {
-    //   for(j =0; j < (limit-1); ++j) {   
-    //        ++histogram_RR[get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j])];
-    //   }
-    // }
+    // // for RR
+    for(i = start; i <= end; ++i) {
+      for(j =0; j < limit; ++j) {   
+           ++histogram_RR[get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j])];
+      }
+    }
 
-    // // for DD
-    // for(i = start; i <= end; ++i) {
-    //   for(j =0; j < (limit-1); ++j)  {  
-    //     ++histogram_DD[get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j])];
-    //   }
-    // }
+    // for DD
+    for(i = start; i <= end; ++i) {
+      for(j =0; j < limit; ++j)  {  
+        ++histogram_DD[get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j])];
+      }
+    }
     
 	MPI_Reduce(histogram_DD,histogram_DD_total,360,MPI_LONG,MPI_SUM,MASTER,MPI_COMM_WORLD);
 	MPI_Reduce(histogram_DR,histogram_DR_total,360,MPI_LONG,MPI_SUM,MASTER,MPI_COMM_WORLD);
@@ -161,21 +150,21 @@ int main (int argc, char *argv[])
 
     for ( int i = 0; i < 360; ++i ) histsum += histogram_DD_total[i];
     printf("   Histogram DD : sum = %ld\n",histsum);
-    if ( histsum != result_wanted ) correct_value = 0;
+    if ( histsum != 10000000000L ) correct_value = 0;
 
     histsum = 0L;
     for ( int i = 0; i < 360; ++i ) 
       histsum += histogram_DR_total[i];
     printf("   Histogram DR : sum = %ld\n",histsum);
-    if ( histsum != result_wanted ) correct_value = 0;
+    if ( histsum != 10000000000L ) correct_value = 0;
 
     histsum = 0L;
     for ( int i = 0; i < 360; ++i ) histsum += histogram_RR_total[i];
     printf("   Histogram RR : sum = %ld\n",histsum);
-    if ( histsum != result_wanted ) correct_value = 0;
+    if ( histsum != 10000000000L ) correct_value = 0;
 
     if ( correct_value != 1 ) 
-       {printf("   Histogram sums should be %d  Ending program prematurely\n",result_wanted);return(0);}
+       {printf("   Histogram sums should be 10000000000L  Ending program prematurely\n");return(0);}
 
     printf("Omega values for the histograms:\n");
     float omega[360];
