@@ -84,25 +84,41 @@ int main (int argc, char *argv[])
     MPI_Bcast(rand_decl, limit, MPI_INT, MASTER, MPI_COMM_WORLD);
 
     int range = limit/total_proc;
+    int total = limit*limit;
     int remainder = limit - (range*total_proc);
     int even_division_remainder = rank%2;
 
     int end,start;
    
+   // at MASTER (rank 0)
     if(rank == MASTER) {
+        printf("marker 1 \n");
+
       start = rank*range;
       end = start + range;
     }
 
+    // at last rank
     else if(rank == (total_proc-1)){
-      start = (rank*range)+1;
-      end = (start-1) + range + remainder;
-      limit = limit + 2;
+        printf("marker 2 \n");
+        start = rank*range+1;
+        end = limit - 1;
     }
     
+    // at other ranks
     else {
+      printf("marker 3 \n");
+
       start = (rank*range)+1;
-      end = (start-1) + range;
+      end = start + range;
+
+      printf("limit -2 %d \n",(limit - 2));
+      printf("start: %d,  end: %d \n",start,end);
+      if(end == (limit - 1)) {
+        end = limit - 2;
+      }
+      printf("Then start: %d,  end: %d \n",start,end);
+
     }
 
     printf("rank %d: start = %d, end = %d\n",rank,start,end);
@@ -110,14 +126,9 @@ int main (int argc, char *argv[])
   // for DR
     for(i = start; i <= end; ++i) 
     {
-      for(j =0; j < (limit-1); ++j) {
-        if( j == start && i == (start+1)) {
-
-        }
-        else {
-               printf("    i currently:   %d  j currently:  %d \n",i,j);
+      for(j =0; j < limit; ++j) {
+            printf("    i currently:   %d  j currently:  %d \n",i,j);
             ++histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])];
-        }
         }
     }
 
