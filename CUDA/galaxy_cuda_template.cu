@@ -7,11 +7,10 @@
 // run your program with 
 //    srun -p gpu -c 1 --mem=10G ./galaxy_cuda RealGalaxies_100k_arcmin.dat SyntheticGalaxies_100k_arcmin.dat omega.out
 
-
-
 #include <cuda.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <math.h>
 #include <sys/time.h>
 
@@ -32,10 +31,16 @@ int binsperdegree = 4;
 
 //__global__ void  fillHistogram(..) {}
 
+__global__ void vecAdd(float* A, float* B, float* C, int N)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < N)
+        C[i] = A[i] + B[i];
+}
 
 int main(int argc, char *argv[])
 {
-   int    readdata(char *argv1, char *argv2);
+   int readdata(char *argv1, char *argv2);
    long int histogramDRsum, histogramDDsum, histogramRRsum;
    double start, end, kerneltime, walltime;
    struct timeval _ttime;
@@ -49,7 +54,7 @@ int main(int argc, char *argv[])
    gettimeofday(&_ttime, &_tzone);
    walltime = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
 
-   if ( readdata(argv[1], argv[2]) != 0 ) return(-1);
+    if ( readdata(argv[1], argv[2]) != 0 ) return(-1);
 
 // For your entertainment: some performance parameters of the GPU you are running your programs on!
    if ( getDevice() != 0 ) return(-1);
@@ -58,32 +63,56 @@ int main(int argc, char *argv[])
    histogramDD = (long int *)calloc(totaldegrees*binsperdegree+1L,sizeof(long int));
    histogramRR = (long int *)calloc(totaldegrees*binsperdegree+1L,sizeof(long int));
    CPUMemory += 3L*(totaldegrees*binsperdegree+1L)*sizeof(long int);
-   
-   
+
+
    // input data is available in the arrays float real_rasc[], real_decl[], rand_rasc[], rand_decl[];
    // allocate memory on the GPU for input data and histograms
    // and initialize the data on GPU by copying the real and rand data to the GPU
-   
+
+    int N = 100000;
+    size_t arraybytes = N * sizeof(float);
+
+   // Allocate arrays in GPU device memory
+    float* device_real_rasc; cudaMalloc(&device_real_rasc, arraybytes);
+    float* device_real_decl; cudaMalloc(&device_real_decl, arraybytes);
+    float* device_rand_rasc; cudaMalloc(&device_rand_rasc, arraybytes);
+    float* device_rand_decl; cudaMalloc(&device_rand_decl, arraybytes);
+
+     float* histogramDDTotal; cudaMalloc(&histogramDDTotal, (totaldegrees*binsperdegree+1L));
+     float* histogramDRTotal; cudaMalloc(&histogramDRTotal, (totaldegrees*binsperdegree+1L));
+     float* histogramRRTotal; cudaMalloc(&histogramRRTotal, (totaldegrees*binsperdegree+1L));
 
    // call the GPU kernel(s) that fill the three histograms
 
+    // Copy arrays from host memory to device memory
+    cudaMemcpy(device_real_rasc, real_rasc, arraybytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(device_real_decl, real_decl, arraybytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(device_rand_rasc, rand_rasc, arraybytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(device_rand_decl, rand_decl, arraybytes, cudaMemcpyHostToDevice);
 
+    // Calculate how many threads, how many thread blocks
+    int threadsInBlock = 256;
+    int blocksInGrid = (N + threadsInBlock - 1) / threadsInBlock;
 
-   return(0);
+    // Invoke kernel
+    vecAdd<<<blocksInGrid, threadsInBlock>>>(device_real_rasc, device_real_decl, histogramDDTotal, N);
 
+    // NEED TO USE ATOMIC OPERATION TO INCREMENT
 
+    // Copy result from device memory to host memory
+    // h_C contains the result in host memory
+    cudaMemcpy(histogramDD, histogramDDTotal, arraybytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(histogramDR, histogramDRTotal, arraybytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(histogramRR, histogramRRTotal, arraybytes, cudaMemcpyDeviceToHost);
 
+    // do something with the values in h_C
+    // Free device memory
+    cudaFree(device_real_rasc); cudaFree(device_real_decl); cudaFree(device_rand_rasc); cudaFree(device_rand_decl);
 
+    // Free host memory ...
+    free(histogramDR); free(histogramDD); free(histogramRR);
 
-
-
-
-
-
-
-
-
-
+/////////////////////////////////////////// ////////////////////////
 
 
 // checking to see if your histograms have the right number of entries
@@ -139,6 +168,8 @@ int main(int argc, char *argv[])
 
    return(0);
 }
+
+
 
 int readdata(char *argv1, char *argv2)
 {
