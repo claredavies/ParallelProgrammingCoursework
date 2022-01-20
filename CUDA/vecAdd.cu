@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
- 
+
+int totaldegrees = 360;
+int binsperdegree = 4;
+
 // CUDA kernel. Each thread takes care of one element of c
-__global__ void vecAdd(float *real_rasc, float *real_decl, float *rand_rasc, float *rand_decl,float *histogram_DD
-    ,float *histogram_DR, float *histogram_RR, int n)
+__global__ void vecAdd(float *real_rasc, float *real_decl, float *rand_rasc, float *rand_decl,long *histogram_DD
+    ,long *histogram_DR, long *histogram_RR, int n)
 {
+
+      //atomicAdd(foo, 1);
+
     // Get our global thread ID
     int id = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -22,6 +28,8 @@ int main( int argc, char* argv[] )
 {
     // Size of vectors
     int n = 100000;
+    //int readdata(char *argv1, char *argv2);
+
  
     // Host input vectors
     float *h_real_rasc;
@@ -30,9 +38,7 @@ int main( int argc, char* argv[] )
     float *h_rand_decl;
 
     //Host output vector
-    float *h_histogram_DD;
-    float *h_histogram_DR;
-    float *h_histogram_RR;
+    long *h_histogram_DR, *h_histogram_DD, *h_histogram_RR;
 
     // Device input vectors
     float *d_real_rasc;
@@ -41,12 +47,11 @@ int main( int argc, char* argv[] )
     float *d_rand_decl;
 
     //Device output vector
-     float *d_histogram_DD;
-     float *d_histogram_DR;
-     float *d_histogram_RR;
+    long int *d_histogram_DR, *d_histogram_DD, *d_histogram_RR;
  
     // Size, in bytes, of each vector
     size_t bytes = n*sizeof(double);
+    size_t size_long_int = n*sizeof(long int);
  
     // Allocate memory for each vector on host
     h_real_rasc = (float*)malloc(bytes);
@@ -54,18 +59,18 @@ int main( int argc, char* argv[] )
     h_rand_rasc = (float*)malloc(bytes);
     h_rand_decl = (float*)malloc(bytes);
 
-    h_histogram_DD = (float*)malloc(bytes);
-    h_histogram_DR = (float*)malloc(bytes);
-    h_histogram_RR = (float*)malloc(bytes);
+    h_histogram_DD = (long int *)malloc(size_long_int );
+    h_histogram_DR = (long int *)malloc(size_long_int );
+    h_histogram_RR = (long int *)malloc(size_long_int );
 
     // Allocate memory for each vector on GPU
     cudaMalloc(&d_real_rasc, bytes);
     cudaMalloc(&d_real_decl, bytes);
     cudaMalloc(&d_rand_rasc, bytes);
     cudaMalloc(&d_rand_decl, bytes);
-    cudaMalloc(&d_histogram_DD, bytes);
-    cudaMalloc(&d_histogram_DR, bytes);
-    cudaMalloc(&d_histogram_RR, bytes);
+    cudaMalloc(&d_histogram_DD, size_long_int );
+    cudaMalloc(&d_histogram_DR, size_long_int );
+    cudaMalloc(&d_histogram_RR, size_long_int );
  
     int i;
     // Initialize vectors on host
@@ -95,9 +100,9 @@ int main( int argc, char* argv[] )
      , d_histogram_RR, n);
  
     // Copy array back to host
-    cudaMemcpy( h_histogram_DD, d_histogram_DD, bytes, cudaMemcpyDeviceToHost );
-    cudaMemcpy( h_histogram_DR, d_histogram_DR, bytes, cudaMemcpyDeviceToHost );
-    cudaMemcpy( h_histogram_RR, d_histogram_RR, bytes, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_DD, d_histogram_DD, size_long_int, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_DR, d_histogram_DR, size_long_int, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_RR, d_histogram_RR, size_long_int, cudaMemcpyDeviceToHost );
 
     // Sum up vector c and print result divided by n, this should equal 1 within error
     double sum_DD = 0;
