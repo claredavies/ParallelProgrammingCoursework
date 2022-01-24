@@ -12,21 +12,20 @@ float *h_rand_rasc, *h_rand_decl;
 __device__ int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
 // CUDA kernel. Each thread takes care of one element of c
-__global__ void vecAdd(float *real_rasc, float *real_decl, float *rand_rasc, float *rand_decl, int *histogram_DD
-    ,int *histogram_DR, int *histogram_RR, int n)
+__global__ void vecAdd(float *real_rasc, float *real_decl, float *rand_rasc, float *rand_decl, unsigned long long int *histogram_DD
+    ,unsigned long long int *histogram_DR, unsigned long long int *histogram_RR, int n)
 {
     // Get our global thread ID
-    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    int i = blockIdx.x*blockDim.x+threadIdx.x;
 
     // Make sure we do not go out of bounds
-    if (idx < n) {
-        printf("ID:   %d \n",idx);
+    if (i < n) {
+       // printf("ID:   %d \n",idx);
         for(int j =0; j < n; ++j) {
-                atomicAdd(&(histogram_DR[0]),(int)1);
+         atomicAdd(&(histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])]),(int)1);
+         atomicAdd(&(histogram_DD[get_index(real_rasc[i], real_decl[i], real_rasc[j], real_decl[j])]),(int)1);
+         atomicAdd(&(histogram_RR[get_index(rand_rasc[i], rand_decl[i], rand_rasc[j], rand_decl[j])]),(int)1);
         }
-        //    printf("j:   %d \n",j);
-        //    atomicAdd(&(histogram_DR[get_index(real_rasc[idx], real_decl[idx], rand_rasc[j], rand_decl[j])]),(int)1);
-        //
      }
 }
 
@@ -52,10 +51,10 @@ int main( int argc, char* argv[] )
     if ( getDevice() != 0 ) return(-1);
 
     // Size of vectors
-    int n = 10000;
+    int n = 100000;
 
     //Host output vector
-    int *h_histogram_DR, *h_histogram_DD, *h_histogram_RR;
+    unsigned long long int *h_histogram_DR, *h_histogram_DD, *h_histogram_RR;
 
     FILE *outfil;
     if ( argc != 4 ) {printf("Usage: a.out real_data random_data output_data\n");return(-1);}
@@ -64,11 +63,11 @@ int main( int argc, char* argv[] )
     float *d_real_rasc; float *d_real_decl; float *d_rand_rasc; float *d_rand_decl;
 
     //Device output vector
-    int *d_histogram_DR, *d_histogram_DD, *d_histogram_RR;
+    unsigned long long int *d_histogram_DR, *d_histogram_DD, *d_histogram_RR;
  
     // Size, in bytes, of each vector
     size_t bytes = n*sizeof(double);
-    //size_t size_long_int = n*sizeof(long int);
+    size_t size_long_int = n*sizeof(unsigned long long int);
     size_t size_int = n*sizeof(int);
  
     // Allocate memory for each vector on host
@@ -77,18 +76,18 @@ int main( int argc, char* argv[] )
     h_rand_rasc = (float*)malloc(bytes);
     h_rand_decl = (float*)malloc(bytes);
 
-    h_histogram_DD = (int*)calloc((totaldegrees*binsperdegree+1L),size_int);
-    h_histogram_DR = (int*)calloc((totaldegrees*binsperdegree+1L),size_int);
-    h_histogram_RR = (int*)calloc((totaldegrees*binsperdegree+1L),size_int);
+    h_histogram_DD = (unsigned long long int*)calloc((totaldegrees*binsperdegree+1L),size_long_int);
+    h_histogram_DR = (unsigned long long int*)calloc((totaldegrees*binsperdegree+1L),size_long_int);
+    h_histogram_RR = (unsigned long long int*)calloc((totaldegrees*binsperdegree+1L),size_long_int);
 
     // Allocate memory for each vector on GPU
     cudaMalloc(&d_real_rasc, bytes);
     cudaMalloc(&d_real_decl, bytes);
     cudaMalloc(&d_rand_rasc, bytes);
     cudaMalloc(&d_rand_decl, bytes);
-    cudaMalloc(&d_histogram_DD, size_int );
-    cudaMalloc(&d_histogram_DR, size_int );
-    cudaMalloc(&d_histogram_RR, size_int );
+    cudaMalloc(&d_histogram_DD, size_long_int);
+    cudaMalloc(&d_histogram_DR, size_long_int);
+    cudaMalloc(&d_histogram_RR, size_long_int);
 
     printf("here 2");
 
@@ -113,34 +112,31 @@ int main( int argc, char* argv[] )
      , d_histogram_RR, n);
  
     // Copy array back to host
-    cudaMemcpy( h_histogram_DD, d_histogram_DD, size_int, cudaMemcpyDeviceToHost );
-    cudaMemcpy( h_histogram_DR, d_histogram_DR, size_int, cudaMemcpyDeviceToHost );
-    cudaMemcpy( h_histogram_RR, d_histogram_RR, size_int, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_DD, d_histogram_DD, size_long_int, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_DR, d_histogram_DR, size_long_int, cudaMemcpyDeviceToHost );
+    cudaMemcpy( h_histogram_RR, d_histogram_RR, size_long_int, cudaMemcpyDeviceToHost );
 
-    int histogramDRsum, histogramDDsum, histogramRRsum;
+    long int histogramDRsum, histogramDDsum, histogramRRsum;
 
     histogramDRsum = 0;
     for ( int i = 0; i < binsperdegree*totaldegrees;++i ) {
          histogramDRsum += h_histogram_DR[i];
     }
     printf("   DR histogram sum = %ld\n",histogramDRsum);
-    if ( histogramDRsum != 10000000000L )
-     {   printf("   Incorrect histogram sum, exiting..\n");
-         return(0);
-     }
+    //if ( histogramDRsum != 10000000000L ) {   printf("   Incorrect histogram sum, exiting..\n");   return(0);}
 
     histogramDDsum = 0L;
     for ( int i = 0; i < binsperdegree*totaldegrees;++i )
         histogramDDsum += h_histogram_DD[i];
     printf("   DD histogram sum = %ld\n",histogramDDsum);
-    if ( histogramDDsum != 10000000000L ) {printf("   Incorrect histogram sum, exiting..\n");return(0);}
+    //if ( histogramDDsum != 10000000000L ) {printf("   Incorrect histogram sum, exiting..\n");return(0);}
 
     histogramRRsum = 0L;
     for ( int i = 0; i < binsperdegree*totaldegrees;++i )
         histogramRRsum += h_histogram_RR[i];
     printf("   RR histogram sum = %ld\n",histogramRRsum);
 
-    if ( histogramRRsum != 10000000000L ) {printf("   Incorrect histogram sum, exiting..\n");return(0);}
+    //if ( histogramRRsum != 10000000000L ) {printf("   Incorrect histogram sum, exiting..\n");return(0);}
 
 
    printf("   Omega values:");
