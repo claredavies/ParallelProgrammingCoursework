@@ -1,6 +1,17 @@
+// on dione, first load the cuda module
+//    module load cuda
+//
+// compile your program with
+//    nvcc -O3 -arch=sm_70 --ptxas-options=-v -o galaxy galaxy_cuda.cu -lm
+//
+// run your program with
+//    srun -p gpu -c 1 -t 10:00 --mem=10G  ./galaxy_cuda RealGalaxies_100k_arcmin.txt SyntheticGalaxies_100k_arcmin.txt omega.txt
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/time.h>
+#include <cuda.h>
 
 int    NoofReal;
 int    NoofRand;
@@ -46,7 +57,7 @@ __device__ int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2)
  
 int main( int argc, char* argv[] )
 {
-    printf("here 1   \n");
+    struct timeval _ttime;
     int readdata(char *argv1, char *argv2);
     int getDevice(void);
 
@@ -59,10 +70,10 @@ int main( int argc, char* argv[] )
     FILE *outfil;
     if ( argc != 4 ) {printf("Usage: a.out real_data random_data output_data\n");return(-1);}
 
-     printf("here 2   \n");
-            if ( getDevice() != 0 ){
-                   return(-1);
-            }
+    gettimeofday(&_ttime, NULL);
+    double time_start = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+
+    if ( getDevice() != 0 ) return(-1);
 
     // Device input vectors
     float *d_real_rasc; float *d_real_decl; float *d_rand_rasc; float *d_rand_decl;
@@ -93,8 +104,6 @@ int main( int argc, char* argv[] )
     cudaMalloc(&d_histogram_DD, size_long_int);
     cudaMalloc(&d_histogram_DR, size_long_int);
     cudaMalloc(&d_histogram_RR, size_long_int);
-
-    printf("here 3");
 
     if ( readdata(argv[1], argv[2]) != 0 ) return(-1);
 
@@ -187,6 +196,11 @@ int main( int argc, char* argv[] )
         free(h_histogram_DD);
         free(h_histogram_DR);
         free(h_histogram_RR);
+
+    gettimeofday(&_ttime, NULL);
+    double time_end = (double)_ttime.tv_sec + (double)_ttime.tv_usec/1000000.;
+
+    printf("   Wall clock run time    = %.1lf secs\n",time_end - time_start);
 
     return 0;
 }
