@@ -86,8 +86,6 @@ int main (int argc, char *argv[])
 
     int range = limit/total_proc;
     int total = limit*limit;
-    int remainder = limit - (range*total_proc);
-    int even_division_remainder = rank%2;
 
     int end,start;
    
@@ -110,8 +108,9 @@ int main (int argc, char *argv[])
     else {
       start = (rank*range)+1;
       end = start + (range-1);
-
     }
+
+    //printf("rank %d: start = %d, end = %d\n",rank,start,end);
 
   // for DR
     for(i = start; i <= end; ++i) 
