@@ -3,12 +3,15 @@
  *     This code runs using an MPI library, either OpenMPI or MPICH2.
  *     These libraries can be installed in either a cluster of computers
  *     or a multicore machine.
- *     
+ *
+ *  How to load needed module:
+ *   module load openmpi
+ *
  *  How to compile:
- *     mpicc -o vec-add VA-MPI-simple.c
+ *    mpicc   -O3   -o   galaxy_mpi   galaxy_mpi.c   -lm
  *
  *  How to execute:
- *     mpirun -np 2 ./vec-add
+ *     srun   -n   100    ./galaxy_mpi     RealGalaxies_100k_arcmin.txt   SyntheticGalaxies_100k_arcmin.txt    omega.txt
  *
  *     Note that this executes the code on 2 processes, using the -np command line flag.
  *     See ideas for further exploration of MPI using this code at the end of this file.
@@ -31,7 +34,7 @@
 float *real_rasc, *real_decl, *rand_rasc, *rand_decl;
 float  pif;
 long int MemoryAllocatedCPU = 0L;
-double start,time,stop;
+double start_time,time_taken,stop_time;
 
 int main (int argc, char *argv[]) 
 {
@@ -39,9 +42,9 @@ int main (int argc, char *argv[])
     int parseargs_readinput(int argc, char *argv[]);
     int get_index(float rasc_1, float decl_1, float rasc_2, float decl_2);
 
-    start = MPI_Wtime();
+    start_time = MPI_Wtime();
     pif = acosf(-1.0f);
-   
+
 	long int histogram_DD[360] = {0L};
     long int histogram_DR[360] = {0L};
     long int histogram_RR[360] = {0L};
@@ -110,13 +113,10 @@ int main (int argc, char *argv[])
 
     }
 
-    printf("rank %d: start = %d, end = %d\n",rank,start,end);
-
   // for DR
     for(i = start; i <= end; ++i) 
     {
       for(j =0; j < limit; ++j) {
-            // printf("    i currently:   %d  j currently:  %d \n",i,j);
             ++histogram_DR[get_index(real_rasc[i], real_decl[i], rand_rasc[j], rand_decl[j])];
         }
     }
@@ -192,15 +192,17 @@ int main (int argc, char *argv[])
        printf("   Omega values written to file %s\n",argv[3]);
        }
        
-    stop = MPI_Wtime();
-    time = stop-start;	
+    stop_time = MPI_Wtime();
+    time_taken = stop_time-start_time;
+    printf("Run time    = %.1lf secs\n",time_taken);
+
 	}
 
 	// clean up memory
 	if (rank == MASTER)  {
 		free(real_rasc);  free(real_decl); free(rand_rasc); free(rand_decl);
 	}
-	
+
 	// 9. Terminate MPI Environment and Processes
 	return(0);
 }
